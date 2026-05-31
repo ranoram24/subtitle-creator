@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SubtitleCreator.ViewModels"
+             xmlns:models="clr-namespace:SubtitleCreator.Models"
+             x:Class="SubtitleCreator.Views.JobView"
+             x:DataType="vm:JobViewModel">
+
+  <DockPanel Margin="8">
+
+    <!-- Header: filename + progress -->
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0 0 0 12">
+      <TextBlock Text="{Binding VideoFileName}" FontSize="16" FontWeight="SemiBold"/>
+      <Grid ColumnDefinitions="*,Auto">
+        <ProgressBar Grid.Column="0" Value="{Binding Percent}" Maximum="100" Height="8"/>
+        <TextBlock Grid.Column="1" Margin="8 0 0 0"
+                   Text="{Binding Percent, StringFormat='{}{0}%'}"/>
+      </Grid>
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <TextBlock Text="{Binding Stage}" Foreground="Gray"/>
+        <TextBlock Text="{Binding ElapsedSeconds, StringFormat='Elapsed: {0:F0}s'}"
+                   Foreground="Gray"/>
+      </StackPanel>
+
+      <!-- Error banner -->
+      <Border Background="#3F0000" CornerRadius="4" Padding="8"
+              IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF6B6B" TextWrapping="Wrap"/>
+      </Border>
+    </StackPanel>
+
+    <!-- Live subtitle feed -->
+    <ScrollViewer DockPanel.Dock="Bottom">
+      <ItemsControl ItemsSource="{Binding Segments}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="models:SubtitleSegment">
+            <Grid ColumnDefinitions="60,60,*" Margin="0 2">
+              <TextBlock Grid.Column="0" Text="{Binding Start, StringFormat='{}{0:F1}s'}"
+                         Foreground="Gray" FontSize="11"/>
+              <TextBlock Grid.Column="1" Text="{Binding End, StringFormat='{}{0:F1}s'}"
+                         Foreground="Gray" FontSize="11"/>
+              <TextBlock Grid.Column="2" Text="{Binding Text}"
+                         TextWrapping="Wrap" FlowDirection="RightToLeft"/>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+  </DockPanel>
+</UserControl>

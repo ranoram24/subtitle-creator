@@ -1,0 +1,16 @@
+# Core AI
+faster-whisper>=1.0.3
+transformers>=4.41.0
+sentencepiece>=0.2.0
+sacremoses>=0.1.1
+
+# PyTorch — replace with CUDA wheel if GPU available:
+#   pip install torch>=2.2.0 --index-url https://download.pytorch.org/whl/cu121
+torch>=2.2.0
+
+# Audio / video
+ffmpeg-python>=0.2.0
+numpy>=1.26.0
+
+# Dev / testing
+pytest>=8.0.0

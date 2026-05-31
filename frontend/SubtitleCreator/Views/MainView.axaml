@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:SubtitleCreator.ViewModels"
+             xmlns:views="clr-namespace:SubtitleCreator.Views"
+             x:Class="SubtitleCreator.Views.MainView"
+             x:DataType="vm:MainViewModel">
+
+  <DockPanel LastChildFill="True" Margin="16">
+
+    <!-- Top: file selection + pipeline selector + start button -->
+    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0 0 0 16">
+
+      <TextBlock Text="Subtitle Creator" FontSize="22" FontWeight="Bold"/>
+
+      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+        <TextBox Grid.Column="0"
+                 PlaceholderText="Drop a video file here or browse…"
+                 Text="{Binding SelectedFilePath}"
+                 IsReadOnly="False"/>
+        <Button Grid.Column="1" Margin="8 0 0 0"
+                Content="Browse"
+                Click="OnBrowseClicked"/>
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <TextBlock Text="Pipeline:" VerticalAlignment="Center"/>
+        <RadioButton Content="Hebrew → Hebrew"
+                     IsChecked="{Binding SelectedPipeline,
+                       Converter={x:Static vm:PipelineTypeConverter.Instance},
+                       ConverterParameter=HebToHeb}"/>
+        <RadioButton Content="Any Language → Hebrew"
+                     IsChecked="{Binding SelectedPipeline,
+                       Converter={x:Static vm:PipelineTypeConverter.Instance},
+                       ConverterParameter=AnyToHeb}"/>
+      </StackPanel>
+
+      <Button Content="Generate Subtitles"
+              Command="{Binding StartJobCommand}"
+              HorizontalAlignment="Left"/>
+    </StackPanel>
+
+    <!-- Left: job list -->
+    <Border DockPanel.Dock="Left" Width="220" Margin="0 0 12 0"
+            BorderBrush="Gray" BorderThickness="1" CornerRadius="4">
+      <ListBox ItemsSource="{Binding Jobs}"
+               SelectedItem="{Binding ActiveJob}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:JobViewModel">
+            <StackPanel Spacing="2" Margin="4">
+              <TextBlock Text="{Binding VideoFileName}" FontWeight="SemiBold"
+                         TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="{Binding Stage}" FontSize="11" Foreground="Gray"/>
+              <ProgressBar Value="{Binding Percent}" Maximum="100" Height="4"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <!-- Right: active job detail -->
+    <ContentControl Content="{Binding ActiveJob}">
+      <ContentControl.DataTemplates>
+        <DataTemplate x:DataType="vm:JobViewModel">
+          <views:JobView/>
+        </DataTemplate>
+      </ContentControl.DataTemplates>
+    </ContentControl>
+
+  </DockPanel>
+</UserControl>
