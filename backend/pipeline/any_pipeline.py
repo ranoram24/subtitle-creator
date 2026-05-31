@@ -16,7 +16,15 @@ from pipeline.model_loader import load_whisper, get_batch_size
 from pipeline.srt_writer import Segment
 from pipeline.translator import translate_batch
 
-TRANSLATE_MODEL = "large-v3"   # standard whisper-large-v3 for best foreign-lang coverage
+# Prefer large-v3 for best multilingual quality; fall back to the turbo model
+# if large-v3 is not yet cached (avoids a 3 GB download on first run).
+import os as _os, pathlib as _pathlib
+def _pick_whisper_model() -> str:
+    hf_cache = _pathlib.Path(_os.environ.get("HF_HOME", _os.path.expanduser("~/.cache/huggingface/hub")))
+    large_v3_cached = any(hf_cache.glob("models--Systran--faster-whisper-large-v3/snapshots/*/model.bin"))
+    return "large-v3" if large_v3_cached else "ivrit-ai/whisper-large-v3-turbo-ct2"
+
+TRANSLATE_MODEL = _pick_whisper_model()
 
 _VAD_PARAMS = {
     "min_silence_duration_ms": 500,
