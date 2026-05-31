@@ -16,9 +16,9 @@ backend/tmp/
 *.wav
 
 # C# / .NET
-frontend/bin/
-frontend/obj/
-frontend/.vs/
+**/bin/
+**/obj/
+**/.vs/
 *.user
 *.suo
 
