@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using SubtitleCreator.Models;
 using SubtitleCreator.Services;
 using SubtitleCreator.ViewModels;
 
@@ -19,22 +20,28 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            var settings = AppSettings.Load();
             _bridge = new PythonBridgeService();
 
-            // Resolve python executable and backend path relative to the app executable.
-            var appDir = AppContext.BaseDirectory;
-            var backendDir = Path.GetFullPath(Path.Combine(appDir, "..", "..", "..", "..", "..", "backend"));
-            var pythonExe = Path.Combine(backendDir, ".venv", "Scripts", "python.exe");
+            var location = BackendLocator.Find();
+            if (location is not null)
+            {
+                // Settings can override the auto-detected python executable
+                var pythonExe = !string.IsNullOrWhiteSpace(settings.PythonExeOverride) &&
+                                File.Exists(settings.PythonExeOverride)
+                    ? settings.PythonExeOverride
+                    : location.PythonExe;
 
-            if (File.Exists(pythonExe))
-                _bridge.Start(pythonExe, backendDir);
+                _bridge.Start(pythonExe, location.BackendDir);
+            }
             else
+            {
                 System.Diagnostics.Debug.WriteLine(
-                    $"[App] Python venv not found at {pythonExe} — run scripts/setup.ps1 first.");
+                    "[App] Could not locate backend/ or Python — run scripts/setup.ps1 first.");
+            }
 
-            var vm = new MainViewModel(_bridge);
+            var vm = new MainWindowViewModel(_bridge, settings);
             desktop.MainWindow = new MainWindow { DataContext = vm };
-
             desktop.ShutdownRequested += async (_, _) => await _bridge.DisposeAsync();
         }
 

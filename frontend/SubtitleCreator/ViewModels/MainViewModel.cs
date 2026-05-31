@@ -10,6 +10,7 @@ namespace SubtitleCreator.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly PythonBridgeService _bridge;
+    private readonly AppSettings _settings;
 
     public ObservableCollection<JobViewModel> Jobs { get; } = [];
 
@@ -17,9 +18,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _selectedFilePath;
     [ObservableProperty] private JobViewModel? _activeJob;
 
-    public MainViewModel(PythonBridgeService bridge)
+    public MainViewModel(PythonBridgeService bridge, AppSettings settings)
     {
         _bridge = bridge;
+        _settings = settings;
         _ = ListenToMessagesAsync();
     }
 
@@ -33,17 +35,18 @@ public partial class MainViewModel : ObservableObject
             VideoPath = SelectedFilePath,
             Pipeline = SelectedPipeline,
         };
-        var vm = new JobViewModel(job.Id, job.VideoPath, job.Pipeline);
+        var vm = new JobViewModel(job.Id, job.VideoPath, job.Pipeline)
+        {
+            CancelRequested = CancelJob,
+        };
         Jobs.Add(vm);
         ActiveJob = vm;
 
         _bridge.SendStartJob(job.Id, job.VideoPath, job.Pipeline);
     }
 
-    [RelayCommand]
-    private void CancelJob(JobViewModel? vm)
+    internal void CancelJob(JobViewModel vm)
     {
-        if (vm is null) return;
         _bridge.SendCancelJob(vm.JobId);
         vm.Status = JobStatus.Cancelled;
         vm.Stage = "Cancelled";

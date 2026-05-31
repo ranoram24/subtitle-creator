@@ -7,18 +7,42 @@
 
   <DockPanel Margin="8">
 
-    <!-- Header: filename + progress -->
-    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0 0 0 12">
-      <TextBlock Text="{Binding VideoFileName}" FontSize="16" FontWeight="SemiBold"/>
+    <!-- Header: filename + progress + cancel -->
+    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0 0 0 8">
+
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Grid.Column="0" Text="{Binding VideoFileName}"
+                   FontSize="16" FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis"/>
+        <Button Grid.Column="1"
+                Content="Cancel"
+                Command="{Binding CancelCommand}"
+                IsVisible="{Binding IsRunning}"
+                Padding="8 2"/>
+      </Grid>
+
       <Grid ColumnDefinitions="*,Auto">
         <ProgressBar Grid.Column="0" Value="{Binding Percent}" Maximum="100" Height="8"/>
         <TextBlock Grid.Column="1" Margin="8 0 0 0"
                    Text="{Binding Percent, StringFormat='{}{0}%'}"/>
       </Grid>
+
       <StackPanel Orientation="Horizontal" Spacing="16">
         <TextBlock Text="{Binding Stage}" Foreground="Gray"/>
         <TextBlock Text="{Binding ElapsedSeconds, StringFormat='Elapsed: {0:F0}s'}"
-                   Foreground="Gray"/>
+                   Foreground="Gray"
+                   IsVisible="{Binding IsRunning}"/>
+      </StackPanel>
+
+      <!-- Completed: clickable output path -->
+      <StackPanel Orientation="Horizontal" Spacing="6"
+                  IsVisible="{Binding SrtPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="Output:" Foreground="Gray"/>
+        <TextBlock Text="{Binding SrtPath}"
+                   Foreground="#4CAF50"
+                   TextTrimming="CharacterEllipsis"
+                   Cursor="Hand"
+                   PointerPressed="OnSrtPathClicked"/>
       </StackPanel>
 
       <!-- Error banner -->
@@ -26,20 +50,30 @@
               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF6B6B" TextWrapping="Wrap"/>
       </Border>
+
     </StackPanel>
 
-    <!-- Live subtitle feed -->
-    <ScrollViewer DockPanel.Dock="Bottom">
+    <!-- Segment count footer -->
+    <TextBlock DockPanel.Dock="Bottom"
+               Text="{Binding Segments.Count, StringFormat='{}{0} segments so far'}"
+               Foreground="Gray" FontSize="11" Margin="0 4 0 0"/>
+
+    <!-- Live subtitle feed — fills all remaining space -->
+    <ScrollViewer x:Name="SegmentScroller">
       <ItemsControl ItemsSource="{Binding Segments}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="models:SubtitleSegment">
-            <Grid ColumnDefinitions="60,60,*" Margin="0 2">
-              <TextBlock Grid.Column="0" Text="{Binding Start, StringFormat='{}{0:F1}s'}"
-                         Foreground="Gray" FontSize="11"/>
-              <TextBlock Grid.Column="1" Text="{Binding End, StringFormat='{}{0:F1}s'}"
-                         Foreground="Gray" FontSize="11"/>
-              <TextBlock Grid.Column="2" Text="{Binding Text}"
-                         TextWrapping="Wrap" FlowDirection="RightToLeft"/>
+            <Grid ColumnDefinitions="70,70,*" Margin="0 3">
+              <TextBlock Grid.Column="0"
+                         Text="{Binding Start, StringFormat='{}{0:F2}s'}"
+                         Foreground="Gray" FontSize="11" VerticalAlignment="Top"/>
+              <TextBlock Grid.Column="1"
+                         Text="{Binding End, StringFormat='{}{0:F2}s'}"
+                         Foreground="Gray" FontSize="11" VerticalAlignment="Top"/>
+              <TextBlock Grid.Column="2"
+                         Text="{Binding Text}"
+                         TextWrapping="Wrap"
+                         FlowDirection="RightToLeft"/>
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

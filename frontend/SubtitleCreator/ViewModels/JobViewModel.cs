@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SubtitleCreator.Models;
 
 namespace SubtitleCreator.ViewModels;
@@ -10,14 +11,22 @@ public partial class JobViewModel : ObservableObject
     public string VideoFileName { get; }
     public PipelineType Pipeline { get; }
 
-    [ObservableProperty] private JobStatus _status = JobStatus.Pending;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRunning))]
+    private JobStatus _status = JobStatus.Pending;
+
     [ObservableProperty] private int _percent;
     [ObservableProperty] private string _stage = "Waiting…";
     [ObservableProperty] private double _elapsedSeconds;
     [ObservableProperty] private string? _srtPath;
     [ObservableProperty] private string? _errorMessage;
 
+    public bool IsRunning => Status == JobStatus.Running;
+
     public ObservableCollection<SubtitleSegment> Segments { get; } = [];
+
+    // Set by MainViewModel so the Cancel button can delegate back through the bridge.
+    public Action<JobViewModel>? CancelRequested { get; set; }
 
     public JobViewModel(string jobId, string videoPath, PipelineType pipeline)
     {
@@ -25,6 +34,9 @@ public partial class JobViewModel : ObservableObject
         VideoFileName = Path.GetFileName(videoPath);
         Pipeline = pipeline;
     }
+
+    [RelayCommand]
+    private void Cancel() => CancelRequested?.Invoke(this);
 
     public void ApplyProgress(string stage, int percent, double? elapsedS)
     {
