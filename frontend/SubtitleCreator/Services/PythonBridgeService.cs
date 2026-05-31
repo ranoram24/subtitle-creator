@@ -60,6 +60,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
         _process.OutputDataReceived += OnOutput;
         _process.ErrorDataReceived += OnStderr;
         _process.Start();
+        _process.StandardInput.AutoFlush = true;   // without this, writes sit in the StreamWriter buffer forever
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
     }
