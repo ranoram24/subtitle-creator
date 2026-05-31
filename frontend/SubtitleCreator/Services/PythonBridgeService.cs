@@ -27,15 +27,27 @@ public sealed class PythonBridgeService : IAsyncDisposable
     public ChannelReader<IpcMessage> Messages => _channel.Reader;
 
     private Process? _process;
+    private string? _pythonExe;
+    private string? _backendDir;
 
-    /// <summary>Starts the Python backend subprocess.</summary>
+    public bool IsRunning => _process is { HasExited: false };
+
     public void Start(string pythonExe, string backendDir)
     {
+        _pythonExe = pythonExe;
+        _backendDir = backendDir;
+        _StartProcess();
+    }
+
+    private void _StartProcess()
+    {
+        if (_pythonExe is null || _backendDir is null) return;
+
         var psi = new ProcessStartInfo
         {
-            FileName = pythonExe,
-            Arguments = $"\"{Path.Combine(backendDir, "main.py")}\"",
-            WorkingDirectory = backendDir,
+            FileName = _pythonExe,
+            Arguments = $"\"{Path.Combine(_backendDir, "main.py")}\"",
+            WorkingDirectory = _backendDir,
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
@@ -54,6 +66,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
 
     public void SendStartJob(string jobId, string videoPath, PipelineType pipeline)
     {
+        if (!IsRunning) return;
         var pipelineStr = pipeline == PipelineType.HebToHeb ? "heb_to_heb" : "any_to_heb";
         var json = JsonSerializer.Serialize(new
         {
@@ -62,19 +75,59 @@ public sealed class PythonBridgeService : IAsyncDisposable
             video_path = videoPath,
             pipeline = pipelineStr,
         });
-        _process?.StandardInput.WriteLine(json);
+        _process!.StandardInput.WriteLine(json);
     }
 
-    public void SendCancelJob(string jobId)
+    /// <summary>
+    /// Cancel a job.  If the job is loading a model, the gentle signal has no
+    /// effect — so after a short grace period we hard-kill the Python process
+    /// and restart it so the UI is responsive again.
+    /// </summary>
+    public void CancelJob(string jobId)
     {
-        var json = JsonSerializer.Serialize(new { type = "cancel_job", job_id = jobId });
-        _process?.StandardInput.WriteLine(json);
+        // Gentle signal first
+        if (IsRunning)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(new { type = "cancel_job", job_id = jobId });
+                _process!.StandardInput.WriteLine(json);
+            }
+            catch { /* stdin may already be closed */ }
+        }
+
+        // Hard-kill after 1.5 s — the only reliable way to interrupt model loading
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(1500);
+            ForceKillAndRestart();
+        });
+    }
+
+    public void ForceKillAndRestart()
+    {
+        if (_process is not null)
+        {
+            try
+            {
+                if (!_process.HasExited) _process.Kill(entireProcessTree: true);
+            }
+            catch { }
+            _process.Dispose();
+            _process = null;
+        }
+        _StartProcess();
     }
 
     public void SendShutdown()
     {
-        var json = JsonSerializer.Serialize(new { type = "shutdown" });
-        _process?.StandardInput.WriteLine(json);
+        if (!IsRunning) return;
+        try
+        {
+            var json = JsonSerializer.Serialize(new { type = "shutdown" });
+            _process!.StandardInput.WriteLine(json);
+        }
+        catch { }
     }
 
     private void OnOutput(object sender, DataReceivedEventArgs e)
@@ -84,30 +137,30 @@ public sealed class PythonBridgeService : IAsyncDisposable
         {
             var node = JsonNode.Parse(e.Data);
             if (node is null) return;
-            var type = node["type"]?.GetValue<string>() ?? "";
+            var type  = node["type"]?.GetValue<string>()  ?? "";
             var jobId = node["job_id"]?.GetValue<string>() ?? "";
 
             IpcMessage msg = type switch
             {
                 "progress" => new ProgressMessage(
                     jobId,
-                    node["stage"]?.GetValue<string>() ?? "",
-                    node["percent"]?.GetValue<int>() ?? 0,
-                    node["elapsed_s"]?.GetValue<double>()),
+                    node["stage"]?.GetValue<string>()        ?? "",
+                    node["percent"]?.GetValue<int>()         ?? 0,
+                    node["elapsed_s"]?.GetValue<double?>()),
                 "segment" => new SegmentMessage(
                     jobId,
-                    node["index"]?.GetValue<int>() ?? 0,
-                    node["start"]?.GetValue<double>() ?? 0,
-                    node["end"]?.GetValue<double>() ?? 0,
-                    node["text"]?.GetValue<string>() ?? ""),
+                    node["index"]?.GetValue<int>()           ?? 0,
+                    node["start"]?.GetValue<double>()        ?? 0,
+                    node["end"]?.GetValue<double>()          ?? 0,
+                    node["text"]?.GetValue<string>()         ?? ""),
                 "complete" => new CompleteMessage(
                     jobId,
-                    node["srt_path"]?.GetValue<string>() ?? "",
-                    node["segment_count"]?.GetValue<int>() ?? 0),
+                    node["srt_path"]?.GetValue<string>()     ?? "",
+                    node["segment_count"]?.GetValue<int>()   ?? 0),
                 "error" => new ErrorMessage(
                     jobId,
-                    node["message"]?.GetValue<string>() ?? "",
-                    node["recoverable"]?.GetValue<bool>() ?? false),
+                    node["message"]?.GetValue<string>()      ?? "",
+                    node["recoverable"]?.GetValue<bool>()    ?? false),
                 _ => new IpcMessage(type, jobId),
             };
 
@@ -132,8 +185,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
         if (_process is not null)
         {
             await Task.Run(() => _process.WaitForExit(5000));
-            if (!_process.HasExited)
-                _process.Kill();
+            if (!_process.HasExited) _process.Kill(entireProcessTree: true);
             _process.Dispose();
         }
     }

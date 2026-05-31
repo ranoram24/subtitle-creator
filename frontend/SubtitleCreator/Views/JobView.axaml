@@ -17,8 +17,9 @@
         <Button Grid.Column="1"
                 Content="Cancel"
                 Command="{Binding CancelCommand}"
-                IsVisible="{Binding IsRunning}"
-                Padding="8 2"/>
+                IsVisible="{Binding IsActive}"
+                Background="#C0392B" Foreground="White"
+                Padding="10 4"/>
       </Grid>
 
       <Grid ColumnDefinitions="*,Auto">

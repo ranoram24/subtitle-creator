@@ -12,6 +12,12 @@
 
       <TextBlock Text="Subtitle Creator" FontSize="22" FontWeight="Bold"/>
 
+      <!-- Warning banner: shown when Python backend is not running -->
+      <Border Background="#7F3000" CornerRadius="4" Padding="10 6"
+              IsVisible="{Binding WarningMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="{Binding WarningMessage}" Foreground="#FFB347" TextWrapping="Wrap"/>
+      </Border>
+
       <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
         <Border Grid.Column="0"
                 BorderBrush="Gray" BorderThickness="1" CornerRadius="4"

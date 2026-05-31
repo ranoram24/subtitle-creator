@@ -13,19 +13,20 @@ public partial class JobViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRunning))]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
     private JobStatus _status = JobStatus.Pending;
 
     [ObservableProperty] private int _percent;
-    [ObservableProperty] private string _stage = "Waiting…";
+    [ObservableProperty] private string _stage = "Queued";
     [ObservableProperty] private double _elapsedSeconds;
     [ObservableProperty] private string? _srtPath;
     [ObservableProperty] private string? _errorMessage;
 
     public bool IsRunning => Status == JobStatus.Running;
+    public bool IsActive  => Status is JobStatus.Pending or JobStatus.Running;
 
     public ObservableCollection<SubtitleSegment> Segments { get; } = [];
 
-    // Set by MainViewModel so the Cancel button can delegate back through the bridge.
     public Action<JobViewModel>? CancelRequested { get; set; }
 
     public JobViewModel(string jobId, string videoPath, PipelineType pipeline)
@@ -43,7 +44,7 @@ public partial class JobViewModel : ObservableObject
         Stage = stage switch
         {
             "extracting_audio" => "Extracting audio…",
-            "loading_model"    => "Loading AI model…",
+            "loading_model"    => "Loading AI model… (first run may take several minutes)",
             "transcribing"     => "Transcribing…",
             "translating"      => "Translating to Hebrew…",
             "writing_srt"      => "Writing SRT…",
