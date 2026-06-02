@@ -21,7 +21,7 @@ public partial class MainViewModel : ObservableObject
         _settings = settings;
 
         if (!bridge.IsRunning)
-            WarningMessage = "Python backend not found — run scripts/setup.ps1 first.";
+            WarningMessage = "Backend not found. Make sure backend.exe is in the same folder as SubtitleCreator.exe.";
 
         _ = ListenToMessagesAsync();
     }

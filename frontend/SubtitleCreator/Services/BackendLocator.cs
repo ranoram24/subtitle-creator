@@ -15,19 +15,22 @@ public static class BackendLocator
     /// </summary>
     public static Location? Find()
     {
-        // For single-file published apps, AppContext.BaseDirectory is a temp extraction
-        // folder — useless for walking up to find backend/. Try the physical exe path first.
         var physicalExeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? "";
+
+        // Compiled release: backend.exe sits next to SubtitleCreator.exe
+        var compiledExe = Path.Combine(physicalExeDir, "backend.exe");
+        if (File.Exists(compiledExe))
+            return new Location(string.Empty, compiledExe);
+
+        // Dev fallback: find backend/ folder with Python venv
         var backendDir = FindBackendDir(physicalExeDir)
                       ?? FindBackendDir(AppContext.BaseDirectory);
         if (backendDir is null) return null;
 
-        // Prefer the project-local venv
         var venvPython = Path.Combine(backendDir, ".venv", "Scripts", "python.exe");
         if (File.Exists(venvPython))
             return new Location(backendDir, venvPython);
 
-        // Fall back to whatever python is on PATH
         var systemPython = FindOnPath("python.exe") ?? FindOnPath("python3.exe");
         if (systemPython is not null)
             return new Location(backendDir, systemPython);

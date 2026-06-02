@@ -29,12 +29,20 @@ public partial class App : Application
             var location = BackendLocator.Find();
             if (location is not null)
             {
-                var pythonExe = !string.IsNullOrWhiteSpace(settings.PythonExeOverride) &&
-                                File.Exists(settings.PythonExeOverride)
-                    ? settings.PythonExeOverride
-                    : location.PythonExe;
-
-                _bridge.Start(pythonExe, location.BackendDir);
+                if (string.IsNullOrEmpty(location.BackendDir))
+                {
+                    // Compiled backend.exe — run it directly
+                    _bridge.Start(location.PythonExe, null);
+                }
+                else
+                {
+                    // Dev mode — run python main.py
+                    var pythonExe = !string.IsNullOrWhiteSpace(settings.PythonExeOverride) &&
+                                    File.Exists(settings.PythonExeOverride)
+                        ? settings.PythonExeOverride
+                        : location.PythonExe;
+                    _bridge.Start(pythonExe, location.BackendDir);
+                }
             }
             else
             {

@@ -30,11 +30,11 @@ public sealed class PythonBridgeService : IAsyncDisposable
 
     private Process? _process;
     private string? _pythonExe;
-    private string? _backendDir;
+    private string? _backendDir; // null = compiled backend.exe mode
 
     public bool IsRunning => _process is { HasExited: false };
 
-    public void Start(string pythonExe, string backendDir)
+    public void Start(string pythonExe, string? backendDir)
     {
         _pythonExe = pythonExe;
         _backendDir = backendDir;
@@ -47,11 +47,12 @@ public sealed class PythonBridgeService : IAsyncDisposable
 
         var logPath = Path.Combine(Path.GetTempPath(), "subtitle-creator-backend.log");
 
+        var isCompiled = string.IsNullOrEmpty(_backendDir);
         var psi = new ProcessStartInfo
         {
             FileName = _pythonExe,
-            Arguments = $"-u \"{Path.Combine(_backendDir, "main.py")}\"",
-            WorkingDirectory = _backendDir,
+            Arguments = isCompiled ? string.Empty : $"-u \"{Path.Combine(_backendDir!, "main.py")}\"",
+            WorkingDirectory = isCompiled ? Path.GetDirectoryName(_pythonExe) ?? "" : _backendDir!,
             UseShellExecute = false,
             CreateNoWindow = true,
             WindowStyle = ProcessWindowStyle.Hidden,
