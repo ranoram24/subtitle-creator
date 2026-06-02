@@ -17,6 +17,12 @@ import os
 import sys
 import threading
 
+# Force UTF-8 for all I/O — required on Windows where default is charmap
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from ipc.protocol import (
