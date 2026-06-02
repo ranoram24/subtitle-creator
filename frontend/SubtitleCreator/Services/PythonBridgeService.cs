@@ -43,7 +43,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
 
     private void _StartProcess()
     {
-        if (_pythonExe is null || _backendDir is null) return;
+        if (_pythonExe is null) return;
 
         var logPath = Path.Combine(Path.GetTempPath(), "subtitle-creator-backend.log");
 
@@ -60,10 +60,12 @@ public sealed class PythonBridgeService : IAsyncDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = System.Text.Encoding.UTF8,
-            StandardInputEncoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            StandardErrorEncoding  = System.Text.Encoding.UTF8,
+            StandardInputEncoding  = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
         };
-        psi.EnvironmentVariables["PYTHONUNBUFFERED"] = "1";
-        psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+        psi.EnvironmentVariables["PYTHONUNBUFFERED"]  = "1";
+        psi.EnvironmentVariables["PYTHONIOENCODING"]  = "utf-8";
+        psi.EnvironmentVariables["PYTHONUTF8"]        = "1";
         psi.EnvironmentVariables["PROXY_SECRET"] = AppConstants.ProxySecret;
 
         File.WriteAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] Starting backend: {_pythonExe}\n");
