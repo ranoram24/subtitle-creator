@@ -33,7 +33,7 @@ def segments_to_srt(segments: list[Segment]) -> str:
 def write_srt(segments: list[Segment], output_path: str) -> None:
     """Write segments to a UTF-8 SRT file."""
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(output_path, "w", encoding="utf-8-sig") as f:
         f.write(segments_to_srt(segments))
 
 

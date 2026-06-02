@@ -26,6 +26,7 @@ public partial class JobViewModel : ObservableObject
     public bool IsRunning       => Status == JobStatus.Running;
     public bool IsActive        => Status is JobStatus.Pending or JobStatus.Running;
     public bool IsIndeterminate => Stage.StartsWith("Extracting") || Stage.StartsWith("Starting") || Stage == "Starting…";
+    public bool IsHebrew        => Pipeline == "hebrew";
 
     public ObservableCollection<SubtitleSegment> Segments { get; } = [];
     public ObservableCollection<string> Logs { get; } = [];
@@ -54,8 +55,8 @@ public partial class JobViewModel : ObservableObject
         Stage = stage switch
         {
             "extracting_audio" => "Extracting audio…",
-            "transcribing"     => "Transcribing via OpenAI…",
-            "translating"      => "Translating to Hebrew via GPT…",
+            "transcribing"     => "Transcribing…",
+            "translating"      => "Translating to Hebrew…",
             "writing_srt"      => "Writing SRT…",
             _ => stage,
         };

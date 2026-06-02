@@ -182,4 +182,4 @@ def run(
 
     # ── Yield final Hebrew segments ──────────────────────────────────────────
     for index, ((start, end, _), heb) in enumerate(zip(english_segs, hebrew_texts), start=1):
-        yield Segment(index=index, start=start, end=end, text=heb)
+        yield Segment(index=index, start=start, end=end, text=heb.strip())

@@ -3,7 +3,14 @@
              xmlns:vm="clr-namespace:SubtitleCreator.ViewModels"
              xmlns:models="clr-namespace:SubtitleCreator.Models"
              x:Class="SubtitleCreator.Views.JobView"
-             x:DataType="vm:JobViewModel">
+             x:DataType="vm:JobViewModel"
+             x:Name="Root">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.rtl">
+      <Setter Property="FlowDirection" Value="RightToLeft"/>
+    </Style>
+  </UserControl.Styles>
 
   <DockPanel Margin="8">
 
@@ -80,7 +87,8 @@
                          Foreground="Gray" FontSize="11" VerticalAlignment="Top"/>
               <TextBlock Grid.Column="1" Text="{Binding End, StringFormat='{}{0:F2}s'}"
                          Foreground="Gray" FontSize="11" VerticalAlignment="Top"/>
-              <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="Wrap"/>
+              <TextBlock Grid.Column="2" Text="{Binding Text}" TextWrapping="Wrap"
+                         Classes.rtl="{ReflectionBinding #Root.DataContext.IsHebrew}"/>
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

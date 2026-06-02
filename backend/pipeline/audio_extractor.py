@@ -47,6 +47,7 @@ def extract(video_path: str, output_path: str | None = None) -> str:
         "-acodec", "pcm_s16le",
         "-ar", "16000",
         "-ac", "1",
+        "-af", "aresample=async=1",
         output_path,
     ]
 

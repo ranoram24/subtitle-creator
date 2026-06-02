@@ -23,7 +23,7 @@ public partial class MainViewModel : ObservableObject
         if (!bridge.IsRunning)
             WarningMessage = "Python backend not found — run scripts/setup.ps1 first.";
         else if (string.IsNullOrWhiteSpace(settings.OpenAiApiKey))
-            WarningMessage = "No API key set. Go to Settings and enter your OpenAI key.";
+            WarningMessage = "No API key set. Go to Settings and enter your API key.";
 
         _ = ListenToMessagesAsync();
     }
@@ -60,7 +60,7 @@ public partial class MainViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(_settings.OpenAiApiKey))
         {
-            WarningMessage = "No API key — go to Settings and enter your OpenAI key first.";
+            WarningMessage = "No API key — go to Settings and enter your API key first.";
             return;
         }
 
