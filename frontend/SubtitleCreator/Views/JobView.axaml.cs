@@ -19,7 +19,6 @@ public partial class JobView : UserControl
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
-        // Unsubscribe from old collection
         if (_subscribedCollection is not null)
         {
             _subscribedCollection.CollectionChanged -= OnSegmentsChanged;
@@ -30,14 +29,15 @@ public partial class JobView : UserControl
         {
             _subscribedCollection = vm.Segments;
             vm.Segments.CollectionChanged += OnSegmentsChanged;
+            vm.Logs.CollectionChanged += OnLogsChanged;
         }
     }
 
     private void OnSegmentsChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        // Auto-scroll to the newest segment
-        SegmentScroller.ScrollToEnd();
-    }
+        => SegmentScroller.ScrollToEnd();
+
+    private void OnLogsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        => LogScroller.ScrollToEnd();
 
     private void OnSrtPathClicked(object? sender, PointerPressedEventArgs e)
     {

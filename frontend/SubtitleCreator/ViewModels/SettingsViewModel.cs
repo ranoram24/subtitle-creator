@@ -8,37 +8,23 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly AppSettings _settings;
 
+    [ObservableProperty] private string _openAiApiKey;
     [ObservableProperty] private string _pythonExeOverride;
-    [ObservableProperty] private string _outputDirectoryOverride;
-    [ObservableProperty] private string _preferredDevice;
     [ObservableProperty] private string _statusMessage = string.Empty;
-
-    public IReadOnlyList<string> DeviceOptions { get; } = ["auto", "cuda", "cpu"];
 
     public SettingsViewModel(AppSettings settings)
     {
         _settings = settings;
-        _pythonExeOverride      = settings.PythonExeOverride ?? string.Empty;
-        _outputDirectoryOverride = settings.OutputDirectoryOverride ?? string.Empty;
-        _preferredDevice        = settings.PreferredDevice;
+        _openAiApiKey     = settings.OpenAiApiKey     ?? string.Empty;
+        _pythonExeOverride = settings.PythonExeOverride ?? string.Empty;
     }
 
     [RelayCommand]
     private void Save()
     {
-        _settings.PythonExeOverride       = string.IsNullOrWhiteSpace(PythonExeOverride)  ? null : PythonExeOverride;
-        _settings.OutputDirectoryOverride = string.IsNullOrWhiteSpace(OutputDirectoryOverride) ? null : OutputDirectoryOverride;
-        _settings.PreferredDevice         = PreferredDevice;
+        _settings.OpenAiApiKey      = string.IsNullOrWhiteSpace(OpenAiApiKey)      ? null : OpenAiApiKey;
+        _settings.PythonExeOverride  = string.IsNullOrWhiteSpace(PythonExeOverride)  ? null : PythonExeOverride;
         _settings.Save();
-        StatusMessage = "Settings saved.";
-    }
-
-    [RelayCommand]
-    private void Reset()
-    {
-        PythonExeOverride       = string.Empty;
-        OutputDirectoryOverride = string.Empty;
-        PreferredDevice         = "auto";
-        StatusMessage = string.Empty;
+        StatusMessage = "Saved. Restart the app to apply a new API key.";
     }
 }

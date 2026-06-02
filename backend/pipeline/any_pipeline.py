@@ -46,8 +46,6 @@ def run(
     Stages reported via emit_progress: loading_model → transcribing → translating.
     """
     from faster_whisper import BatchedInferencePipeline
-
-    emit_progress("loading_model", 8, None)
     model = load_whisper(
         TRANSLATE_MODEL,
         emit_error=lambda msg, recoverable: emit_error(msg, recoverable),

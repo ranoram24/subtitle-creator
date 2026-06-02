@@ -41,8 +41,6 @@ def run(
         Segment instances in chronological order.
     """
     from faster_whisper import BatchedInferencePipeline
-
-    emit_progress("loading_model", 8, None)
     model = load_whisper(
         HEB_MODEL,
         emit_error=lambda msg, recoverable: emit_error(msg, recoverable),

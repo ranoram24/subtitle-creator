@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,11 +11,8 @@ public partial class MainViewModel : ObservableObject
     private readonly PythonBridgeService _bridge;
     private readonly AppSettings _settings;
 
-    public ObservableCollection<JobViewModel> Jobs { get; } = [];
-
-    [ObservableProperty] private PipelineType _selectedPipeline = PipelineType.HebToHeb;
     [ObservableProperty] private string? _selectedFilePath;
-    [ObservableProperty] private JobViewModel? _activeJob;
+    [ObservableProperty] private JobViewModel? _currentJob;
     [ObservableProperty] private string? _warningMessage;
 
     public MainViewModel(PythonBridgeService bridge, AppSettings settings)
@@ -26,12 +22,33 @@ public partial class MainViewModel : ObservableObject
 
         if (!bridge.IsRunning)
             WarningMessage = "Python backend not found — run scripts/setup.ps1 first.";
+        else if (string.IsNullOrWhiteSpace(settings.OpenAiApiKey))
+            WarningMessage = "No API key set. Go to Settings and enter your OpenAI key.";
 
         _ = ListenToMessagesAsync();
     }
 
-    [RelayCommand]
-    private void StartJob()
+    [RelayCommand(CanExecute = nameof(CanStart))]
+    private void StartEnglish() => StartJob("english");
+
+    [RelayCommand(CanExecute = nameof(CanStart))]
+    private void StartHebrew() => StartJob("hebrew");
+
+    private bool CanStart() => !string.IsNullOrWhiteSpace(SelectedFilePath)
+                               && CurrentJob?.IsActive != true;
+
+    partial void OnSelectedFilePathChanged(string? value)
+    {
+        StartEnglishCommand.NotifyCanExecuteChanged();
+        StartHebrewCommand.NotifyCanExecuteChanged();
+    }
+    partial void OnCurrentJobChanged(JobViewModel? value)
+    {
+        StartEnglishCommand.NotifyCanExecuteChanged();
+        StartHebrewCommand.NotifyCanExecuteChanged();
+    }
+
+    private void StartJob(string pipeline)
     {
         if (string.IsNullOrWhiteSpace(SelectedFilePath)) return;
 
@@ -41,61 +58,73 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var job = new SubtitleJob
+        if (string.IsNullOrWhiteSpace(_settings.OpenAiApiKey))
         {
-            VideoPath = SelectedFilePath,
-            Pipeline  = SelectedPipeline,
-        };
-        var vm = new JobViewModel(job.Id, job.VideoPath, job.Pipeline)
+            WarningMessage = "No API key — go to Settings and enter your OpenAI key first.";
+            return;
+        }
+
+        var jobId = Guid.NewGuid().ToString();
+        CurrentJob = new JobViewModel(jobId, SelectedFilePath, pipeline)
         {
             CancelRequested = CancelJob,
         };
-        Jobs.Add(vm);
-        ActiveJob = vm;
 
-        _bridge.SendStartJob(job.Id, job.VideoPath, job.Pipeline);
+        _bridge.SendStartJob(jobId, SelectedFilePath, pipeline);
     }
 
     internal void CancelJob(JobViewModel vm)
     {
-        // Mark UI immediately so the button disappears and stage text updates
         vm.Status  = JobStatus.Cancelled;
         vm.Stage   = "Cancelling…";
         vm.Percent = 0;
 
-        // Hard-kill the Python process after 1.5 s grace period
         _bridge.CancelJob(vm.JobId);
 
-        // Update label once restart is done (after ~1.5 s)
         _ = Task.Delay(2000).ContinueWith(_ =>
-            Dispatcher.UIThread.InvokeAsync(() => vm.Stage = "Cancelled"));
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                vm.Stage = "Cancelled";
+                StartEnglishCommand.NotifyCanExecuteChanged();
+                StartHebrewCommand.NotifyCanExecuteChanged();
+            }));
     }
 
     private async Task ListenToMessagesAsync()
     {
         await foreach (var msg in _bridge.Messages.ReadAllAsync())
         {
-            var vm = Jobs.FirstOrDefault(j => j.JobId == msg.JobId);
-            if (vm is null) continue;
+            if (msg is PythonBridgeService.LogMessage log)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => CurrentJob?.Logs.Add(log.Text));
+                continue;
+            }
+
+            var vm = CurrentJob;
+            if (vm is null || vm.JobId != msg.JobId) continue;
+            if (vm.Status == JobStatus.Cancelled) continue;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                // Ignore messages that arrive after the user already cancelled
-                if (vm.Status == JobStatus.Cancelled) return;
-
                 switch (msg)
                 {
                     case PythonBridgeService.ProgressMessage p:
                         vm.ApplyProgress(p.Stage, p.Percent, p.ElapsedS);
+                        StartEnglishCommand.NotifyCanExecuteChanged();
+                        StartHebrewCommand.NotifyCanExecuteChanged();
                         break;
                     case PythonBridgeService.SegmentMessage s:
                         vm.ApplySegment(new SubtitleSegment(s.Index, s.Start, s.End, s.Text));
                         break;
                     case PythonBridgeService.CompleteMessage c:
                         vm.ApplyComplete(c.SrtPath, c.SegmentCount);
+                        StartEnglishCommand.NotifyCanExecuteChanged();
+                        StartHebrewCommand.NotifyCanExecuteChanged();
                         break;
                     case PythonBridgeService.ErrorMessage e:
                         vm.ApplyError(e.Message, e.Recoverable);
+                        StartEnglishCommand.NotifyCanExecuteChanged();
+                        StartHebrewCommand.NotifyCanExecuteChanged();
                         break;
                 }
             });

@@ -41,8 +41,17 @@ def emit_error(job_id: str, message: str, recoverable: bool = False) -> None:
 
 def stdin_reader(on_command: Callable[[dict], None], stop_event: threading.Event) -> None:
     """Blocking loop that reads JSON commands from stdin and dispatches them."""
-    for raw_line in sys.stdin:
-        if stop_event.is_set():
+    # Force line-buffering on stdin — the default block-buffering on Windows
+    # pipes means `for line in sys.stdin` waits for 8 KB before returning,
+    # so the first command is never processed until a second one arrives.
+    try:
+        sys.stdin.reconfigure(line_buffering=True)
+    except AttributeError:
+        pass  # older Python fallback
+
+    while not stop_event.is_set():
+        raw_line = sys.stdin.readline()
+        if not raw_line:          # EOF — C# closed stdin (app shutting down)
             break
         raw_line = raw_line.strip()
         if not raw_line:
@@ -51,5 +60,6 @@ def stdin_reader(on_command: Callable[[dict], None], stop_event: threading.Event
             cmd = json.loads(raw_line)
         except json.JSONDecodeError as exc:
             sys.stderr.write(f"[ipc] bad JSON on stdin: {exc}\n")
+            sys.stderr.flush()
             continue
         on_command(cmd)

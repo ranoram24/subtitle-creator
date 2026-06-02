@@ -20,6 +20,8 @@ public sealed class PythonBridgeService : IAsyncDisposable
         : IpcMessage("complete", JobId);
     public record ErrorMessage(string JobId, string Message, bool Recoverable)
         : IpcMessage("error", JobId);
+    public record LogMessage(string Text)
+        : IpcMessage("log", "");
 
     private readonly Channel<IpcMessage> _channel =
         Channel.CreateUnbounded<IpcMessage>(new UnboundedChannelOptions { SingleWriter = true });
@@ -29,13 +31,15 @@ public sealed class PythonBridgeService : IAsyncDisposable
     private Process? _process;
     private string? _pythonExe;
     private string? _backendDir;
+    private string? _openAiApiKey;
 
     public bool IsRunning => _process is { HasExited: false };
 
-    public void Start(string pythonExe, string backendDir)
+    public void Start(string pythonExe, string backendDir, string? openAiApiKey = null)
     {
         _pythonExe = pythonExe;
         _backendDir = backendDir;
+        _openAiApiKey = openAiApiKey;
         _StartProcess();
     }
 
@@ -43,18 +47,28 @@ public sealed class PythonBridgeService : IAsyncDisposable
     {
         if (_pythonExe is null || _backendDir is null) return;
 
+        var logPath = Path.Combine(Path.GetTempPath(), "subtitle-creator-backend.log");
+
         var psi = new ProcessStartInfo
         {
             FileName = _pythonExe,
-            Arguments = $"\"{Path.Combine(_backendDir, "main.py")}\"",
+            Arguments = $"-u \"{Path.Combine(_backendDir, "main.py")}\"",
             WorkingDirectory = _backendDir,
             UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             StandardOutputEncoding = System.Text.Encoding.UTF8,
-            StandardInputEncoding = System.Text.Encoding.UTF8,
+            StandardInputEncoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
         };
+        psi.EnvironmentVariables["PYTHONUNBUFFERED"] = "1";
+        psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+        if (!string.IsNullOrWhiteSpace(_openAiApiKey))
+            psi.EnvironmentVariables["OPENAI_API_KEY"] = _openAiApiKey;
+
+        File.WriteAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] Starting backend: {_pythonExe}\n");
 
         _process = new Process { StartInfo = psi, EnableRaisingEvents = true };
         _process.OutputDataReceived += OnOutput;
@@ -65,16 +79,15 @@ public sealed class PythonBridgeService : IAsyncDisposable
         _process.BeginErrorReadLine();
     }
 
-    public void SendStartJob(string jobId, string videoPath, PipelineType pipeline)
+    public void SendStartJob(string jobId, string videoPath, string pipeline = "english")
     {
         if (!IsRunning) return;
-        var pipelineStr = pipeline == PipelineType.HebToHeb ? "heb_to_heb" : "any_to_heb";
         var json = JsonSerializer.Serialize(new
         {
             type = "start_job",
             job_id = jobId,
             video_path = videoPath,
-            pipeline = pipelineStr,
+            pipeline,
         });
         _process!.StandardInput.WriteLine(json);
     }
@@ -173,10 +186,17 @@ public sealed class PythonBridgeService : IAsyncDisposable
         }
     }
 
-    private static void OnStderr(object sender, DataReceivedEventArgs e)
+    private void OnStderr(object sender, DataReceivedEventArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(e.Data))
-            Debug.WriteLine($"[python stderr] {e.Data}");
+        if (string.IsNullOrWhiteSpace(e.Data)) return;
+        Debug.WriteLine($"[python stderr] {e.Data}");
+        _channel.Writer.TryWrite(new LogMessage(e.Data));
+        try
+        {
+            var logPath = Path.Combine(Path.GetTempPath(), "subtitle-creator-backend.log");
+            File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {e.Data}\n");
+        }
+        catch { }
     }
 
     public async ValueTask DisposeAsync()

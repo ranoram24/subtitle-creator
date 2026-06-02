@@ -33,17 +33,22 @@ def load_whisper(model_name: str, emit_error=None) -> "WhisperModel":
     Returns:
         Loaded WhisperModel instance.
     """
+    sys.stderr.write(f"[model_loader] Importing WhisperModel...\n"); sys.stderr.flush()
     from faster_whisper import WhisperModel
+    sys.stderr.write(f"[model_loader] Checking CUDA...\n"); sys.stderr.flush()
 
     try:
         import torch
         cuda_available = torch.cuda.is_available()
+        sys.stderr.write(f"[model_loader] CUDA available: {cuda_available}\n"); sys.stderr.flush()
     except ImportError:
         cuda_available = False
+        sys.stderr.write("[model_loader] torch not found, using CPU\n"); sys.stderr.flush()
 
     for device, compute_type in _COMPUTE_CASCADE:
         if device == "cuda" and not cuda_available:
             continue
+        sys.stderr.write(f"[model_loader] Trying {device}/{compute_type} for '{model_name}'...\n"); sys.stderr.flush()
         try:
             model = WhisperModel(
                 model_name,
@@ -52,7 +57,7 @@ def load_whisper(model_name: str, emit_error=None) -> "WhisperModel":
                 cpu_threads=4,
                 num_workers=2,
             )
-            sys.stderr.write(f"[model_loader] Loaded {model_name} on {device}/{compute_type}\n")
+            sys.stderr.write(f"[model_loader] Loaded {model_name} on {device}/{compute_type}\n"); sys.stderr.flush()
             return model
         except RuntimeError as exc:
             msg = f"[model_loader] {device}/{compute_type} failed: {exc} — trying next option"

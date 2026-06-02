@@ -8,9 +8,9 @@ public class AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "SubtitleCreator", "settings.json");
 
+    public string? OpenAiApiKey { get; set; }
     public string? PythonExeOverride { get; set; }
     public string? OutputDirectoryOverride { get; set; }
-    public string PreferredDevice { get; set; } = "auto";   // "auto" | "cuda" | "cpu"
 
     public static AppSettings Load()
     {

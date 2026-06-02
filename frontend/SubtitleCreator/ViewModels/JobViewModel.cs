@@ -9,7 +9,6 @@ public partial class JobViewModel : ObservableObject
 {
     public string JobId { get; }
     public string VideoFileName { get; }
-    public PipelineType Pipeline { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRunning))]
@@ -17,23 +16,34 @@ public partial class JobViewModel : ObservableObject
     private JobStatus _status = JobStatus.Pending;
 
     [ObservableProperty] private int _percent;
-    [ObservableProperty] private string _stage = "Queued";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIndeterminate))]
+    private string _stage = "Starting…";
     [ObservableProperty] private double _elapsedSeconds;
     [ObservableProperty] private string? _srtPath;
     [ObservableProperty] private string? _errorMessage;
 
-    public bool IsRunning => Status == JobStatus.Running;
-    public bool IsActive  => Status is JobStatus.Pending or JobStatus.Running;
+    public bool IsRunning       => Status == JobStatus.Running;
+    public bool IsActive        => Status is JobStatus.Pending or JobStatus.Running;
+    public bool IsIndeterminate => Stage.StartsWith("Extracting") || Stage.StartsWith("Starting") || Stage == "Starting…";
 
     public ObservableCollection<SubtitleSegment> Segments { get; } = [];
+    public ObservableCollection<string> Logs { get; } = [];
+
+    [ObservableProperty] private bool _hasLogs;
+    [ObservableProperty] private bool _hasSegments;
 
     public Action<JobViewModel>? CancelRequested { get; set; }
 
-    public JobViewModel(string jobId, string videoPath, PipelineType pipeline)
+    public string Pipeline { get; }   // "english" | "hebrew"
+
+    public JobViewModel(string jobId, string videoPath, string pipeline = "english")
     {
         JobId = jobId;
         VideoFileName = Path.GetFileName(videoPath);
         Pipeline = pipeline;
+        Logs.CollectionChanged     += (_, _) => HasLogs     = Logs.Count > 0;
+        Segments.CollectionChanged += (_, _) => HasSegments = Segments.Count > 0;
     }
 
     [RelayCommand]
@@ -44,9 +54,8 @@ public partial class JobViewModel : ObservableObject
         Stage = stage switch
         {
             "extracting_audio" => "Extracting audio…",
-            "loading_model"    => "Loading AI model… (first run may take several minutes)",
-            "transcribing"     => "Transcribing…",
-            "translating"      => "Translating to Hebrew…",
+            "transcribing"     => "Transcribing via OpenAI…",
+            "translating"      => "Translating to Hebrew via GPT…",
             "writing_srt"      => "Writing SRT…",
             _ => stage,
         };

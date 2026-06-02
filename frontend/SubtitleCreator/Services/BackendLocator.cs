@@ -15,7 +15,11 @@ public static class BackendLocator
     /// </summary>
     public static Location? Find()
     {
-        var backendDir = FindBackendDir(AppContext.BaseDirectory);
+        // For single-file published apps, AppContext.BaseDirectory is a temp extraction
+        // folder — useless for walking up to find backend/. Try the physical exe path first.
+        var physicalExeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? "";
+        var backendDir = FindBackendDir(physicalExeDir)
+                      ?? FindBackendDir(AppContext.BaseDirectory);
         if (backendDir is null) return null;
 
         // Prefer the project-local venv

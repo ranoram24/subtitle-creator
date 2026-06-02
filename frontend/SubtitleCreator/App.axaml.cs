@@ -32,7 +32,7 @@ public partial class App : Application
                     ? settings.PythonExeOverride
                     : location.PythonExe;
 
-                _bridge.Start(pythonExe, location.BackendDir);
+                _bridge.Start(pythonExe, location.BackendDir, settings.OpenAiApiKey);
             }
             else
             {
