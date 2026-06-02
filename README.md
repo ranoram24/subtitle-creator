@@ -23,7 +23,7 @@ Drop in a video, pick a language, get an SRT file. No timing, no editing.
 
 1. Drop a video file or click Browse
 2. Click English Subtitles or Hebrew Subtitles
-3. Wait for it to finish — you can see progress in real time
+3. Wait for it to finish - you can see progress in real time
 4. The SRT file gets saved next to your video, or in the folder you pick in Settings
 
 ## Settings
