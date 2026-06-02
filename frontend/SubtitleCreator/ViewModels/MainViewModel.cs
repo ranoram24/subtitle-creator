@@ -22,8 +22,6 @@ public partial class MainViewModel : ObservableObject
 
         if (!bridge.IsRunning)
             WarningMessage = "Python backend not found — run scripts/setup.ps1 first.";
-        else if (string.IsNullOrWhiteSpace(settings.OpenAiApiKey))
-            WarningMessage = "No API key set. Go to Settings and enter your API key.";
 
         _ = ListenToMessagesAsync();
     }
@@ -58,19 +56,13 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_settings.OpenAiApiKey))
-        {
-            WarningMessage = "No API key — go to Settings and enter your API key first.";
-            return;
-        }
-
         var jobId = Guid.NewGuid().ToString();
         CurrentJob = new JobViewModel(jobId, SelectedFilePath, pipeline)
         {
             CancelRequested = CancelJob,
         };
 
-        _bridge.SendStartJob(jobId, SelectedFilePath, pipeline);
+        _bridge.SendStartJob(jobId, SelectedFilePath, pipeline, _settings.OutputDirectoryOverride);
     }
 
     internal void CancelJob(JobViewModel vm)

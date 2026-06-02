@@ -9,21 +9,26 @@
 
     <TextBlock Text="Settings" FontSize="20" FontWeight="Bold"/>
 
-    <!-- API Key -->
+    <!-- Theme -->
     <StackPanel Spacing="6">
-      <TextBlock Text="API Key" FontWeight="SemiBold"/>
-      <TextBlock Foreground="Gray" FontSize="12" TextWrapping="Wrap"
-                 Text="Enter your API key to enable transcription and translation."/>
-      <TextBox Text="{Binding OpenAiApiKey}"
-               PlaceholderText="sk-..."
-               PasswordChar="●"/>
+      <TextBlock Text="Theme" FontWeight="SemiBold"/>
+      <ComboBox ItemsSource="{x:Static vm:SettingsViewModel.ThemeOptions}"
+                SelectedItem="{Binding SelectedTheme}"
+                Width="200" HorizontalAlignment="Left"/>
     </StackPanel>
 
-    <!-- Python override -->
-    <StackPanel Spacing="4">
-      <TextBlock Text="Python executable (leave blank for auto-detect)" Foreground="Gray" FontSize="12"/>
-      <TextBox Text="{Binding PythonExeOverride}"
-               PlaceholderText="e.g. C:\Python311\python.exe"/>
+    <!-- Output directory -->
+    <StackPanel Spacing="6">
+      <TextBlock Text="Save subtitles to" FontWeight="SemiBold"/>
+      <TextBlock Foreground="Gray" FontSize="12"
+                 Text="Leave blank to save next to the video file."/>
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0"
+                 Text="{Binding OutputDirectory}"
+                 PlaceholderText="Same folder as video (default)"/>
+        <Button Grid.Column="1" Margin="8 0 0 0" Content="Browse"
+                Click="OnBrowseOutputDirClicked"/>
+      </Grid>
     </StackPanel>
 
     <Button Content="Save" Command="{Binding SaveCommand}" Width="80" HorizontalAlignment="Left"/>

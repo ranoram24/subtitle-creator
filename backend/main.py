@@ -39,6 +39,7 @@ def _run_job(cmd: dict) -> None:
     job_id     = cmd.get("job_id", "unknown")
     video_path = cmd.get("video_path", "")
     pipeline   = cmd.get("pipeline", "english")   # "english" | "hebrew"
+    output_dir = cmd.get("output_dir", "")        # optional custom output folder
 
     cancel = threading.Event()
     with _jobs_lock:
@@ -81,7 +82,11 @@ def _run_job(cmd: dict) -> None:
 
         # 3 — Write SRT
         _emit("writing_srt", 99)
-        srt_path = srt_path_for(video_path)
+        if output_dir and os.path.isdir(output_dir):
+            base = os.path.splitext(os.path.basename(video_path))[0]
+            srt_path = os.path.join(output_dir, base + ".srt")
+        else:
+            srt_path = srt_path_for(video_path)
         write_srt(segments, srt_path)
         emit_complete(job_id, srt_path, len(segments))
 

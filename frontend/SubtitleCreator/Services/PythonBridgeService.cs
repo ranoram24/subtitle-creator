@@ -31,15 +31,13 @@ public sealed class PythonBridgeService : IAsyncDisposable
     private Process? _process;
     private string? _pythonExe;
     private string? _backendDir;
-    private string? _openAiApiKey;
 
     public bool IsRunning => _process is { HasExited: false };
 
-    public void Start(string pythonExe, string backendDir, string? openAiApiKey = null)
+    public void Start(string pythonExe, string backendDir)
     {
         _pythonExe = pythonExe;
         _backendDir = backendDir;
-        _openAiApiKey = openAiApiKey;
         _StartProcess();
     }
 
@@ -65,8 +63,6 @@ public sealed class PythonBridgeService : IAsyncDisposable
         };
         psi.EnvironmentVariables["PYTHONUNBUFFERED"] = "1";
         psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
-        if (!string.IsNullOrWhiteSpace(_openAiApiKey))
-            psi.EnvironmentVariables["OPENAI_API_KEY"] = _openAiApiKey;
 
         File.WriteAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] Starting backend: {_pythonExe}\n");
 
@@ -79,7 +75,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
         _process.BeginErrorReadLine();
     }
 
-    public void SendStartJob(string jobId, string videoPath, string pipeline = "english")
+    public void SendStartJob(string jobId, string videoPath, string pipeline = "english", string? outputDir = null)
     {
         if (!IsRunning) return;
         var json = JsonSerializer.Serialize(new
@@ -88,6 +84,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
             job_id = jobId,
             video_path = videoPath,
             pipeline,
+            output_dir = outputDir ?? string.Empty,
         });
         _process!.StandardInput.WriteLine(json);
     }

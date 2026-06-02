@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using SubtitleCreator.Models;
 using SubtitleCreator.Services;
 using SubtitleCreator.ViewModels;
@@ -23,16 +24,17 @@ public partial class App : Application
             var settings = AppSettings.Load();
             _bridge = new PythonBridgeService();
 
+            ApplyTheme(settings.Theme);
+
             var location = BackendLocator.Find();
             if (location is not null)
             {
-                // Settings can override the auto-detected python executable
                 var pythonExe = !string.IsNullOrWhiteSpace(settings.PythonExeOverride) &&
                                 File.Exists(settings.PythonExeOverride)
                     ? settings.PythonExeOverride
                     : location.PythonExe;
 
-                _bridge.Start(pythonExe, location.BackendDir, settings.OpenAiApiKey);
+                _bridge.Start(pythonExe, location.BackendDir);
             }
             else
             {
@@ -46,5 +48,16 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    public static void ApplyTheme(string theme)
+    {
+        if (Current is null) return;
+        Current.RequestedThemeVariant = theme switch
+        {
+            "Light" => ThemeVariant.Light,
+            "Dark"  => ThemeVariant.Dark,
+            _       => ThemeVariant.Default,
+        };
     }
 }

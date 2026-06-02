@@ -119,12 +119,9 @@ def run(
     emit_error: Callable[[str, bool], None],
 ) -> Generator[Segment, None, None]:
 
-    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        raise ValueError("OpenAI API key not set. Open the Settings tab and enter your key.")
-
     from openai import OpenAI
-    client = OpenAI(api_key=api_key)
+    from pipeline.config import PROXY_BASE_URL
+    client = OpenAI(api_key="proxy", base_url=f"{PROXY_BASE_URL}/v1")
 
     # ── Step 1: Whisper → English segments ──────────────────────────────────
     duration = _audio_duration(audio_path)
