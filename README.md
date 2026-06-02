@@ -17,8 +17,7 @@ Drop in a video, pick a language, get an SRT file. No timing, no editing.
 ## Setup
 
 1. Download and extract the zip
-2. Run `scripts\setup.ps1` once to install dependencies
-3. Open `SubtitleCreator.exe`
+2. Open `SubtitleCreator.exe`
 
 ## How to use
 
