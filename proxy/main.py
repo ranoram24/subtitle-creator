@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, Response
 app = FastAPI()
 
 _API_KEY = os.environ.get("OPENAI_API_KEY", "")
+_APP_SECRET = os.environ.get("PROXY_APP_SECRET", "")
 _OPENAI_BASE = "https://api.openai.com"
 
 _HOP_BY_HOP = {"transfer-encoding", "connection", "content-encoding", "keep-alive",
@@ -28,6 +29,10 @@ async def proxy(path: str, request: Request):
     if not _API_KEY:
         return Response(content='{"error":"proxy not configured"}', status_code=500,
                         media_type="application/json")
+
+    if _APP_SECRET and request.headers.get("X-App-Secret") != _APP_SECRET:
+        return Response(content='{"error":{"message":"Unauthorized","type":"authentication_error","code":"unauthorized","param":null}}',
+                        status_code=401, media_type="application/json")
 
     url = f"{_OPENAI_BASE}/v1/{path}"
 

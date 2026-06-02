@@ -28,3 +28,8 @@ Thumbs.db
 
 # Output subtitles committed by mistake
 *.srt
+
+# Published / release artifacts
+publish/
+*.zip
+release-*/

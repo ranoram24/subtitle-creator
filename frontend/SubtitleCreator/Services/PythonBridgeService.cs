@@ -63,6 +63,7 @@ public sealed class PythonBridgeService : IAsyncDisposable
         };
         psi.EnvironmentVariables["PYTHONUNBUFFERED"] = "1";
         psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
+        psi.EnvironmentVariables["PROXY_SECRET"] = AppConstants.ProxySecret;
 
         File.WriteAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] Starting backend: {_pythonExe}\n");
 
@@ -187,7 +188,9 @@ public sealed class PythonBridgeService : IAsyncDisposable
     {
         if (string.IsNullOrWhiteSpace(e.Data)) return;
         Debug.WriteLine($"[python stderr] {e.Data}");
+#if DEBUG
         _channel.Writer.TryWrite(new LogMessage(e.Data));
+#endif
         try
         {
             var logPath = Path.Combine(Path.GetTempPath(), "subtitle-creator-backend.log");

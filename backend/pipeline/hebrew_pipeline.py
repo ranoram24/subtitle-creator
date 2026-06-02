@@ -119,9 +119,11 @@ def run(
     emit_error: Callable[[str, bool], None],
 ) -> Generator[Segment, None, None]:
 
+    import httpx
     from openai import OpenAI
-    from pipeline.config import PROXY_BASE_URL
-    client = OpenAI(api_key="proxy", base_url=f"{PROXY_BASE_URL}/v1")
+    from pipeline.config import PROXY_BASE_URL, PROXY_SECRET
+    _http = httpx.Client(headers={"X-App-Secret": PROXY_SECRET}, timeout=httpx.Timeout(300.0))
+    client = OpenAI(api_key="proxy", base_url=f"{PROXY_BASE_URL}/v1", http_client=_http)
 
     # ── Step 1: Whisper → English segments ──────────────────────────────────
     duration = _audio_duration(audio_path)

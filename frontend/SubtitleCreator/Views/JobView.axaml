@@ -62,8 +62,8 @@
           <ItemsControl ItemsSource="{Binding Logs}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="x:String">
-                <TextBlock Text="{Binding}" FontFamily="Consolas,Monospace"
-                           FontSize="11" Foreground="#AAA" TextWrapping="Wrap"/>
+                <SelectableTextBlock Text="{Binding}" FontFamily="Consolas,Monospace"
+                                    FontSize="11" Foreground="#AAA" TextWrapping="Wrap"/>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
