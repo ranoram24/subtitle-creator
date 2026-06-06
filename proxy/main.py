@@ -6,8 +6,11 @@ Deploy to Railway (or any host) and set OPENAI_API_KEY as an environment variabl
 """
 
 import os
+
 import httpx
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
 
 app = FastAPI()
 
@@ -31,30 +34,46 @@ async def proxy(path: str, request: Request):
                         media_type="application/json")
 
     if _APP_SECRET and request.headers.get("X-App-Secret") != _APP_SECRET:
-        return Response(content='{"error":{"message":"Unauthorized","type":"authentication_error","code":"unauthorized","param":null}}',
-                        status_code=401, media_type="application/json")
+        return Response(
+            content='{"error":{"message":"Unauthorized","type":"authentication_error",'
+                    '"code":"unauthorized","param":null}}',
+            status_code=401, media_type="application/json")
 
     url = f"{_OPENAI_BASE}/v1/{path}"
 
     headers = {
         k: v for k, v in request.headers.items()
-        if k.lower() not in ("host", "authorization", "content-length")
+        if k.lower() not in ("host", "authorization", "content-length", "x-app-secret")
     }
     headers["Authorization"] = f"Bearer {_API_KEY}"
 
     body = await request.body()
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
-        resp = await client.request(
-            method=request.method,
-            url=url,
-            headers=headers,
-            content=body,
-            params=dict(request.query_params),
-        )
+    # Use a persistent client so we can stream the response back while keeping
+    # the connection to OpenAI alive.  Railway drops idle connections after ~5 min;
+    # streaming bytes as they arrive prevents the connection from appearing idle.
+    client = httpx.AsyncClient(timeout=httpx.Timeout(300.0))
+    openai_req = client.build_request(
+        method=request.method,
+        url=url,
+        headers=headers,
+        content=body,
+        params=dict(request.query_params),
+    )
+    openai_resp = await client.send(openai_req, stream=True)
 
-    resp_headers = {k: v for k, v in resp.headers.items()
-                    if k.lower() not in _HOP_BY_HOP}
+    resp_headers = {
+        k: v for k, v in openai_resp.headers.items()
+        if k.lower() not in _HOP_BY_HOP
+    }
 
-    return Response(content=resp.content, status_code=resp.status_code,
-                    headers=resp_headers)
+    async def cleanup():
+        await openai_resp.aclose()
+        await client.aclose()
+
+    return StreamingResponse(
+        openai_resp.aiter_bytes(chunk_size=8192),
+        status_code=openai_resp.status_code,
+        headers=resp_headers,
+        background=BackgroundTask(cleanup),
+    )
