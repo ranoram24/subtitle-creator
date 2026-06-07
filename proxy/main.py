@@ -6,11 +6,8 @@ Deploy to Railway (or any host) and set OPENAI_API_KEY as an environment variabl
 """
 
 import os
-
 import httpx
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import StreamingResponse
-from starlette.background import BackgroundTask
 
 app = FastAPI()
 
@@ -49,31 +46,19 @@ async def proxy(path: str, request: Request):
 
     body = await request.body()
 
-    # Use a persistent client so we can stream the response back while keeping
-    # the connection to OpenAI alive.  Railway drops idle connections after ~5 min;
-    # streaming bytes as they arrive prevents the connection from appearing idle.
-    client = httpx.AsyncClient(timeout=httpx.Timeout(300.0))
-    openai_req = client.build_request(
-        method=request.method,
-        url=url,
-        headers=headers,
-        content=body,
-        params=dict(request.query_params),
-    )
-    openai_resp = await client.send(openai_req, stream=True)
+    # 10-minute timeout — audio files (especially music) can take several minutes for Whisper.
+    # Using buffered (non-streaming) response so the backend gets a clean success/error result.
+    async with httpx.AsyncClient(timeout=600.0) as client:
+        resp = await client.request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            content=body,
+            params=dict(request.query_params),
+        )
 
-    resp_headers = {
-        k: v for k, v in openai_resp.headers.items()
-        if k.lower() not in _HOP_BY_HOP
-    }
+    resp_headers = {k: v for k, v in resp.headers.items()
+                    if k.lower() not in _HOP_BY_HOP}
 
-    async def cleanup():
-        await openai_resp.aclose()
-        await client.aclose()
-
-    return StreamingResponse(
-        openai_resp.aiter_bytes(chunk_size=8192),
-        status_code=openai_resp.status_code,
-        headers=resp_headers,
-        background=BackgroundTask(cleanup),
-    )
+    return Response(content=resp.content, status_code=resp.status_code,
+                    headers=resp_headers)
